@@ -1,0 +1,13 @@
+{
+  "hosts": [
+    "yourdomain.com"
+  ],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "CN": "yourdomain.com",
+  "names": [{
+    "emailAddress": "you@yourdomain.com"
+  }]
+}

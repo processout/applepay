@@ -1,0 +1,57 @@
+/*
+Copyright (C) 2016 Apple Inc. All Rights Reserved.
+See LICENSE.txt for this sample’s licensing information
+
+Abstract:
+Styles the example site, as well as the Apple Pay button using -webkit-named-image
+*/
+
+body {
+    font-family: -apple-system, "Helvetica Neue", "Lucida Grande";
+    background: linear-gradient(180deg, #ffffff, #d7d7d7);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+h2 {
+    font-weight: 300;
+    font-size: xx-large;
+}
+
+p {
+    font-weight: 300;
+}
+
+.apple-pay {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+.apple-pay-button {
+    -webkit-appearance: -apple-pay-button;
+    -apple-pay-button-type: buy;
+    visibility: hidden;
+    display: inline-block;
+    width: 200px;
+    min-height: 30px;
+    border: 1px solid black;
+    background-image: -webkit-named-image(apple-pay-logo-black);
+    background-size: 100% calc(60% + 2px);
+    background-repeat: no-repeat;
+    background-color: white;
+    background-position: 50% 50%;
+    border-radius: 5px;
+    padding: 0px;
+    margin: 5px auto;
+    transition: background-color .15s;
+}
+
+.apple-pay-button.visible {
+    visibility: visible;
+}
+
+.apple-pay-button:active {
+    background-color: rgb(152, 152, 152);
+}

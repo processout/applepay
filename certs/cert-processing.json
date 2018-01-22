@@ -1,0 +1,10 @@
+{
+  "CN": "merchant.com.yourmerchantid",
+  "key": {
+    "algo": "ecdsa",
+    "size": 256
+  },
+  "names": [{
+    "emailAddress": "you@yourdomain.com"
+  }]
+}

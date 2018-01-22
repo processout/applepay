@@ -1,0 +1,9 @@
+package: github.com/processout/applepay/example
+import:
+- package: github.com/davecgh/go-spew
+  version: v1.1.0
+  subpackages:
+  - spew
+- package: github.com/gin-gonic/gin
+  version: v1.2
+- package: github.com/processout/applepay
