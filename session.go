@@ -48,7 +48,7 @@ func (m Merchant) Session(url string) (sessionPayload []byte, err error) {
 
 	// Return directly the result
 	body, _ := ioutil.ReadAll(res.Body)
-	//res.Body.Close()
+	_ = res.Body.Close()
 	return body, nil
 }
 
