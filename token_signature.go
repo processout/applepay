@@ -136,7 +136,6 @@ func decodeIntermediateAndLeafCert(sign *C.PKCS7_SIGNED) (inter,
 		err = errors.Wrap(err, "error decoding the leaf certificate")
 		return
 	}
-
 	return
 }
 
