@@ -40,7 +40,7 @@ func (m Merchant) Session(url string) (sessionPayload []byte, err error) {
 	// Send a session request to Apple
 	cl := m.authenticatedClient()
 	buf := bytes.NewBuffer(nil)
-	json.NewEncoder(buf).Encode(m.sessionRequest())
+	_ = json.NewEncoder(buf).Encode(m.sessionRequest())
 	res, err := cl.Post(url, "application/json", buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "error making the request")
