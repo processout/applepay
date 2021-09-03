@@ -285,13 +285,16 @@ func (t PKPaymentToken) extractSigningTime(p7 *C.PKCS7) (time.Time, error) {
 		stBio := newBIO()
 		r := C.ASN1_UTCTIME_print(stBio.C(), (*C.ASN1_UTCTIME)(union(so.value)))
 		if r != 1 {
+			stBio.Free()
 			return time.Time{}, errors.Wrap(opensslErr(), "time encoding error")
 		}
 		pt, err := time.Parse("Jan _2 15:04:05 2006 MST", stBio.ReadAllString())
 		if err != nil {
+			stBio.Free()
 			return time.Time{}, errors.Wrap(err, "error parsing time")
 		}
 		signingTime = pt
+		stBio.Free()
 		break
 	}
 	if signingTime.IsZero() {
