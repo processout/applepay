@@ -200,6 +200,7 @@ func (t PKPaymentToken) verifyPKCS7Signature(p7 *C.PKCS7) error {
 	C.OpenSSL_add_all_algorithms_func()
 	//defer C.EVP_cleanup()
 	signedDataBio := newBIOBytes(t.signedData())
+	defer signedDataBio.Free()
 	// The PKCS7_NOVERIFY flag corresponds to verifying the chain of trust of
 	// the certificates, which should have been done before
 	r := C.PKCS7_verify(p7, nil, nil, signedDataBio.C(), nil, C.PKCS7_NOVERIFY)
@@ -285,13 +286,16 @@ func (t PKPaymentToken) extractSigningTime(p7 *C.PKCS7) (time.Time, error) {
 		stBio := newBIO()
 		r := C.ASN1_UTCTIME_print(stBio.C(), (*C.ASN1_UTCTIME)(union(so.value)))
 		if r != 1 {
+			stBio.Free()
 			return time.Time{}, errors.Wrap(opensslErr(), "time encoding error")
 		}
 		pt, err := time.Parse("Jan _2 15:04:05 2006 MST", stBio.ReadAllString())
 		if err != nil {
+			stBio.Free()
 			return time.Time{}, errors.Wrap(err, "error parsing time")
 		}
 		signingTime = pt
+		stBio.Free()
 		break
 	}
 	if signingTime.IsZero() {
