@@ -200,6 +200,7 @@ func (t PKPaymentToken) verifyPKCS7Signature(p7 *C.PKCS7) error {
 	C.OpenSSL_add_all_algorithms_func()
 	//defer C.EVP_cleanup()
 	signedDataBio := newBIOBytes(t.signedData())
+	defer signedDataBio.Free()
 	// The PKCS7_NOVERIFY flag corresponds to verifying the chain of trust of
 	// the certificates, which should have been done before
 	r := C.PKCS7_verify(p7, nil, nil, signedDataBio.C(), nil, C.PKCS7_NOVERIFY)
