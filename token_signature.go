@@ -92,8 +92,6 @@ func (t PKPaymentToken) decodePKCS7() (p7 *C.PKCS7, inter,
 	}
 	defer C.free(unsafe.Pointer(sign))
 
-	C.PKCS7_SIGNED(sign)
-
 	// Decode intermediate and leaf certificates
 	if inter, leaf, err = decodeIntermediateAndLeafCert(sign); err != nil {
 		err = errors.Wrap(err, "error decoding the embedded certificates")
