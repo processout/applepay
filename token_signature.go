@@ -46,6 +46,8 @@ func (t *PKPaymentToken) verifySignature() error {
 	if err != nil {
 		return errors.Wrap(err, "error decoding the token signature")
 	}
+	defer C.PKCS7_free(p7)
+
 	root, err := loadRootCertificate(AppleRootCertificatePath)
 	if err != nil {
 		return errors.Wrap(err, "error loading the root certificate")
@@ -88,6 +90,7 @@ func (t PKPaymentToken) decodePKCS7() (p7 *C.PKCS7, inter,
 		err = errors.New("openssl error: error dereferencing d in PKCS7")
 		return
 	}
+
 	// Decode intermediate and leaf certificates
 	if inter, leaf, err = decodeIntermediateAndLeafCert(sign); err != nil {
 		err = errors.Wrap(err, "error decoding the embedded certificates")
