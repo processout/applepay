@@ -87,12 +87,14 @@ func (t PKPaymentToken) decodePKCS7() (p7 *C.PKCS7, inter,
 	sign := (*C.PKCS7_SIGNED)(union(p7.d))
 
 	if sign == nil {
+		C.PKCS7_free(p7)
 		err = errors.New("openssl error: error dereferencing d in PKCS7")
 		return
 	}
 
 	// Decode intermediate and leaf certificates
 	if inter, leaf, err = decodeIntermediateAndLeafCert(sign); err != nil {
+		C.PKCS7_free(p7)
 		err = errors.Wrap(err, "error decoding the embedded certificates")
 		return
 	}
