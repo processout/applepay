@@ -191,6 +191,10 @@ func verifyCertificates(root, inter, leaf *x509.Certificate) error {
 	return nil
 }
 
+func init() {
+	C.OpenSSL_add_all_algorithms_func()
+}
+
 // verifyPKCS7Signature verifies that the signature was produced by the leaf
 // certificate contained in the given PKCS7 struct
 func (t PKPaymentToken) verifyPKCS7Signature(p7 *C.PKCS7) error {
@@ -202,7 +206,6 @@ func (t PKPaymentToken) verifyPKCS7Signature(p7 *C.PKCS7) error {
 	//     return errors.Wrap(err, "invalid signature")
 	// }
 
-	C.OpenSSL_add_all_algorithms_func()
 	//defer C.EVP_cleanup()
 	signedDataBio := newBIOBytes(t.signedData())
 	defer signedDataBio.Free()
@@ -269,6 +272,7 @@ func (t PKPaymentToken) verifySigningTime(p7 *C.PKCS7) error {
 // extractSigningTime returns the time of signing from a PKCS7 struct
 func (t PKPaymentToken) extractSigningTime(p7 *C.PKCS7) (time.Time, error) {
 	signerInfoList := C.PKCS7_get_signer_info(p7)
+
 	if signerInfoList == nil {
 		return time.Time{},
 			errors.New("openssl error when extracting signer information")
@@ -315,7 +319,7 @@ func (t PKPaymentToken) extractSigningTime(p7 *C.PKCS7) (time.Time, error) {
 func union(union [8]byte) unsafe.Pointer {
 	dBuf := bytes.NewBuffer(union[:])
 	var ptr uint64
-	binary.Read(dBuf, binary.LittleEndian, &ptr)
+	_ = binary.Read(dBuf, binary.LittleEndian, &ptr)
 	return unsafe.Pointer(uintptr(ptr))
 }
 
