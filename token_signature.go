@@ -191,10 +191,6 @@ func verifyCertificates(root, inter, leaf *x509.Certificate) error {
 	return nil
 }
 
-func init() {
-	C.OpenSSL_add_all_algorithms_func()
-}
-
 // verifyPKCS7Signature verifies that the signature was produced by the leaf
 // certificate contained in the given PKCS7 struct
 func (t PKPaymentToken) verifyPKCS7Signature(p7 *C.PKCS7) error {
@@ -205,6 +201,7 @@ func (t PKPaymentToken) verifyPKCS7Signature(p7 *C.PKCS7) error {
 	//
 	//     return errors.Wrap(err, "invalid signature")
 	// }
+	//C.OpenSSL_add_all_algorithms_func()
 
 	//defer C.EVP_cleanup()
 	signedDataBio := newBIOBytes(t.signedData())
