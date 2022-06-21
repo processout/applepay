@@ -110,3 +110,21 @@ func parseASN1ObjectIdentifier(id string) (asn1.ObjectIdentifier, error) {
 	}
 	return oid, nil
 }
+
+func checkValidity(cert tls.Certificate) error {
+	if cert.Certificate == nil {
+		return errors.New("nil certificate")
+	}
+
+	// Parse the leaf certificate of the certificate chain
+	leaf, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return errors.Wrap(err, "certificate parsing error")
+	}
+
+	if _, err := leaf.Verify(x509.VerifyOptions{}); err != nil {
+		return err
+	}
+
+	return nil
+}

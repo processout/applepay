@@ -75,6 +75,11 @@ func MerchantCertificate(cert tls.Certificate) func(*Merchant) error {
 		if _, ok := cert.PrivateKey.(*rsa.PrivateKey); !ok {
 			return errors.New("merchant key should be RSA")
 		}
+
+		if err := checkValidity(cert); err != nil {
+			return errors.Wrap(err, "invalid certificate")
+		}
+
 		// Verify merchant ID
 		hash, err := extractMerchantHash(cert)
 		if err != nil {
