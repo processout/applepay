@@ -7,8 +7,10 @@ import (
 	"encoding/hex"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type (
@@ -109,4 +111,32 @@ func parseASN1ObjectIdentifier(id string) (asn1.ObjectIdentifier, error) {
 		oid[i] = r
 	}
 	return oid, nil
+}
+
+func checkValidity(cert tls.Certificate) error {
+	if cert.Certificate == nil {
+		return errors.New("nil certificate")
+	}
+
+	// Parse the leaf certificate of the certificate chain
+	leaf, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return errors.Wrap(err, "certificate parsing error")
+	}
+
+	if _, err := leaf.Verify(x509.VerifyOptions{}); err != nil {
+		if errors.As(err, &x509.UnknownAuthorityError{}) {
+			// TODO: certs signed by apple are somehow recognized as self-signed,
+			// probably we need to figure out how to properly configure CA chain in docker
+			// for now just validate expiration period
+			logrus.WithError(err).Warning("cert recognized as self signed")
+
+			now := time.Now()
+			if now.After(leaf.NotAfter) || now.Before(leaf.NotBefore) {
+				return errors.New("certificate is expired or not yet valid")
+			}
+		}
+	}
+
+	return nil
 }
