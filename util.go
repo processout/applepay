@@ -135,7 +135,10 @@ func checkValidity(cert tls.Certificate) error {
 			if now.After(leaf.NotAfter) || now.Before(leaf.NotBefore) {
 				return errors.New("certificate is expired or not yet valid")
 			}
+			return nil
 		}
+
+		return err
 	}
 
 	return nil
