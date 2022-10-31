@@ -1,31 +1,19 @@
 package applepay
 
-/*
-#cgo CFLAGS: -I/usr/local/opt/openssl/include
-#cgo LDFLAGS: -L/usr/local/opt/openssl/lib
-#cgo pkg-config: openssl
-#include <openssl/x509v3.h>
-#include <openssl/err.h>
-
-// Replace macros for cgo
-X509* sk_X509_value_func(STACK_OF(X509) *sk, int i) { return sk_X509_value(sk, i); }
-void OpenSSL_add_all_algorithms_func() { OpenSSL_add_all_algorithms(); }
-int sk_PKCS7_SIGNER_INFO_num_func(STACK_OF(PKCS7_SIGNER_INFO) *sk) { return sk_PKCS7_SIGNER_INFO_num(sk); }
-PKCS7_SIGNER_INFO *sk_PKCS7_SIGNER_INFO_value_func(STACK_OF(PKCS7_SIGNER_INFO) *sk, int i) { return sk_PKCS7_SIGNER_INFO_value(sk, i); }
-*/
 import "C"
-
 import (
 	"bytes"
 	"crypto/x509"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"time"
 	"unsafe"
 
 	"github.com/pkg/errors"
+	"go.mozilla.org/pkcs7"
 )
 
 var (
@@ -41,12 +29,15 @@ func (t *PKPaymentToken) verifySignature() error {
 		return errors.Wrap(err, "invalid version")
 	}
 
-	// Load
-	p7, inter, leaf, err := t.decodePKCS7()
+	//TODO: parse p7
+	p7, err := pkcs7.Parse(t.PaymentData.Signature)
 	if err != nil {
-		return errors.Wrap(err, "error decoding the token signature")
+		return fmt.Errorf("cannot parse our signed data: %s", err.Error())
 	}
-	defer C.PKCS7_free(p7)
+
+	// Load
+	inter := p7.Certificates[1]
+	leaf := p7.Certificates[0]
 
 	root, err := loadRootCertificate(AppleRootCertificatePath)
 	if err != nil {
@@ -57,9 +48,17 @@ func (t *PKPaymentToken) verifySignature() error {
 	if err := verifyCertificates(root, inter, leaf); err != nil {
 		return errors.Wrap(err, "error when verifying the certificates")
 	}
-	if err := t.verifyPKCS7Signature(p7); err != nil {
-		return errors.Wrap(err, "error verifying the PKCS7 signature")
+
+	// TODO: verify PKCS7 signature
+	pool := x509.NewCertPool()
+	pool.AddCert(root)
+	pool.AddCert(inter)
+	pool.AddCert(leaf)
+
+	if err := p7.VerifyWithChain(pool); err != nil {
+		return err
 	}
+
 	if err := t.verifySigningTime(p7); err != nil {
 		return errors.Wrap(
 			err,
@@ -193,7 +192,7 @@ func verifyCertificates(root, inter, leaf *x509.Certificate) error {
 
 // verifyPKCS7Signature verifies that the signature was produced by the leaf
 // certificate contained in the given PKCS7 struct
-func (t PKPaymentToken) verifyPKCS7Signature(p7 *C.PKCS7) error {
+func (t PKPaymentToken) verifyPKCS7Signature(p7 *pkcs7.PKCS7) error {
 	// TODO: use the Go x509 API instead of OpenSSL
 	// This code does not work for some reason:
 	// if err := leaf.CheckSignature(leaf.SignatureAlgorithm, t.signedData(),
@@ -202,8 +201,7 @@ func (t PKPaymentToken) verifyPKCS7Signature(p7 *C.PKCS7) error {
 	//     return errors.Wrap(err, "invalid signature")
 	// }
 
-	C.OpenSSL_add_all_algorithms_func()
-	//defer C.EVP_cleanup()
+	p7.Verify()
 	signedDataBio := newBIOBytes(t.signedData())
 	defer signedDataBio.Free()
 	// The PKCS7_NOVERIFY flag corresponds to verifying the chain of trust of
@@ -238,19 +236,19 @@ func (t PKPaymentToken) signedData() []byte {
 // verifySigningTime checks that the time of signing of the token is before the
 // transaction was received, and that the gap between the two is not too
 // significant. It uses the variable TransactionTimeWindow as a limit.
-func (t PKPaymentToken) verifySigningTime(p7 *C.PKCS7) error {
+func (t PKPaymentToken) verifySigningTime(p7 *pkcs7.PKCS7) error {
 	transactionTime := time.Now()
 	if !t.transactionTime.IsZero() {
 		transactionTime = t.transactionTime
 	}
 
-	signingTime, err := t.extractSigningTime(p7)
-	if err != nil {
-		return errors.Wrap(err, "error reading the signing time from the token")
+	signedTime := time.Time{}
+	if err := p7.UnmarshalSignedAttribute(pkcs7.OIDAttributeSigningTime, &signedTime); err != nil {
+		return err
 	}
 
 	// Check that both times are separated by less than TransactionTimeWindow
-	delta := transactionTime.Sub(signingTime)
+	delta := transactionTime.Sub(signedTime)
 	if delta < -time.Second {
 		return errors.Errorf(
 			"the transaction occured before the signing (%s difference)",
@@ -267,7 +265,7 @@ func (t PKPaymentToken) verifySigningTime(p7 *C.PKCS7) error {
 }
 
 // extractSigningTime returns the time of signing from a PKCS7 struct
-func (t PKPaymentToken) extractSigningTime(p7 *C.PKCS7) (time.Time, error) {
+func (t PKPaymentToken) extractSigningTime(p7 *pkcs7.PKCS7) (time.Time, error) {
 	signerInfoList := C.PKCS7_get_signer_info(p7)
 	if signerInfoList == nil {
 		return time.Time{},
