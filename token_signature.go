@@ -51,16 +51,20 @@ func (t *PKPaymentToken) verifySignature() error {
 	}
 
 	// create the cert poll with iter and leaf
-	pool := x509.NewCertPool()
-	pool.AddCert(root)
-	pool.AddCert(leaf)
-	pool.AddCert(inter)
+	//pool := x509.NewCertPool()
+	//pool.AddCert(root)
+	//pool.AddCert(leaf)
+	//pool.AddCert(inter)
+	//
+	//// verifyPKCS7Signature verifies that the signature was produced by the leaf
+	//// certificate contained in the given PKCS7 struct
+	//if err := p7.VerifyWithChain(pool); err != nil {
+	//	return err
+	//}
 
-	// verifyPKCS7Signature verifies that the signature was produced by the leaf
-	// certificate contained in the given PKCS7 struct
-	if err := p7.VerifyWithChain(pool); err != nil {
-		return err
-	}
+	// TODO: here Kry
+	// TODO: verifies that the signature was produced by the leaf
+	//// certificate contained in the given PKCS7 struct
 
 	if err := t.verifySigningTime(p7); err != nil {
 		return errors.Wrap(
