@@ -53,8 +53,8 @@ func (t *PKPaymentToken) verifySignature() error {
 	// create the cert poll with iter and leaf
 	pool := x509.NewCertPool()
 	pool.AddCert(root)
-	pool.AddCert(inter)
 	pool.AddCert(leaf)
+	pool.AddCert(inter)
 
 	// verifyPKCS7Signature verifies that the signature was produced by the leaf
 	// certificate contained in the given PKCS7 struct
