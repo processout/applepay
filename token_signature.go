@@ -1,5 +1,6 @@
 package applepay
 
+import "C"
 import (
 	"bytes"
 	"crypto/x509"
@@ -22,6 +23,8 @@ var (
 // due to Go's lack of support for PKCS7.
 // See https://developer.apple.com/library/content/documentation/PassKit/Reference/PaymentTokenJSON/PaymentTokenJSON.html#//apple_ref/doc/uid/TP40014929-CH8-SW2
 func (t *PKPaymentToken) verifySignature() error {
+
+	// verify the version EC_v1 or RSA_v1
 	if err := t.checkVersion(); err != nil {
 		return errors.Wrap(err, "invalid version")
 	}
@@ -32,39 +35,30 @@ func (t *PKPaymentToken) verifySignature() error {
 		return fmt.Errorf("cannot parse our signed data: %s", err.Error())
 	}
 
+	// load Apple Root CA - G3 root certificate
 	root, err := loadRootCertificate(AppleRootCertificatePath)
 	if err != nil {
 		return errors.Wrap(err, "error loading the root certificate")
 	}
 
-	if len(p7.Certificates) < 2 {
+	// the certificate list should contain leaf and inter
+	if len(p7.Certificates) != 2 {
 		return errors.New("the len of certificates is less than 2")
 	}
 
 	// Load
-	inter := p7.Certificates[1]
 	leaf := p7.Certificates[0]
+	inter := p7.Certificates[1]
 
-	// Verify
+	// Ensure that the certificates contain the correct custom OIDs: 1.2.840.113635.100.6.29 for the leaf certificate and 1.2.840.113635.100.6.2.14 for the intermediate CA. The value for these marker OIDs doesn’t matter, only their presence.
+	// Ensure that there’s a valid X.509 chain of trust from the signature to the root CA. Specifically, ensure that the signature was created using the private key that corresponds to the leaf certificate, that the leaf certificate is signed by the intermediate CA, and that the intermediate CA is signed by the Apple Root CA - G3.
 	if err := verifyCertificates(root, inter, leaf); err != nil {
 		return errors.Wrap(err, "error when verifying the certificates")
 	}
 
-	// create the cert poll with iter and leaf
-	//pool := x509.NewCertPool()
-	//pool.AddCert(root)
-	//pool.AddCert(leaf)
-	//pool.AddCert(inter)
-	//
-	//// verifyPKCS7Signature verifies that the signature was produced by the leaf
-	//// certificate contained in the given PKCS7 struct
-	//if err := p7.VerifyWithChain(pool); err != nil {
-	//	return err
-	//}
-
-	// TODO: here Kry
-	// TODO: verifies that the signature was produced by the leaf
-	//// certificate contained in the given PKCS7 struct
+	if err := t.verifyPKCS7Signature(leaf, p7); err != nil {
+		return errors.Wrap(err, "error when verifying the pkcs7 signature")
+	}
 
 	if err := t.verifySigningTime(p7); err != nil {
 		return errors.Wrap(
@@ -121,6 +115,28 @@ func verifyCertificates(root, inter, leaf *x509.Certificate) error {
 	}
 
 	return nil
+}
+
+func (t PKPaymentToken) verifyPKCS7Signature(leaf *x509.Certificate, p7 *pkcs7.PKCS7) error {
+	// TODO: use the Go x509 API instead of OpenSSL
+	// This code does not work for some reason:
+	if err := leaf.CheckSignature(leaf.SignatureAlgorithm, t.signedData(), p7.Content); err != nil {
+
+		return errors.Wrap(err, "invalid signature")
+	}
+	return nil
+
+	//C.OpenSSL_add_all_algorithms_func()
+	////defer C.EVP_cleanup()
+	//signedDataBio := newBIOBytes(t.signedData())
+	//defer signedDataBio.Free()
+	//// The PKCS7_NOVERIFY flag corresponds to verifying the chain of trust of
+	//// the certificates, which should have been done before
+	//r := C.PKCS7_verify(p7, nil, nil, signedDataBio.C(), nil, C.PKCS7_NOVERIFY)
+	//if r != 1 {
+	//	return errors.Wrap(opensslErr(), "signature validation error")
+	//}
+	//return nil
 }
 
 // signedData returns the data signed by the client's Secure Element as defined
