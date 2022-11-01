@@ -3,7 +3,6 @@ package applepay
 import "C"
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
@@ -57,9 +56,10 @@ func (t *PKPaymentToken) verifySignature() error {
 		return errors.Wrap(err, "error when verifying the certificates")
 	}
 
-	//if err := t.verifyPKCS7Signature(leaf, p7); err != nil {
-	//	return errors.Wrap(err, "error when verifying the pkcs7 signature")
-	//}
+	// Validate the token’s signature. For ECC (EC_v1), ensure that the signature is a valid Ellyptical Curve Digital Signature Algorithm (ECDSA) signature (ecdsa-with-SHA256 1.2.840.10045.4.3.2) of the concatenated values of the ephemeralPublicKey, data, transactionId, and applicationData keys. For RSA (RSA_v1), ensure that the signature is a valid RSA signature (RSA-with-SHA256 1.2.840.113549.1.1.11) of the concatenated values of the wrappedKey, data, transactionId, and applicationData keys.
+	if err := t.verifyPKCS7Signature(p7); err != nil {
+		return errors.Wrap(err, "error when verifying the pkcs7 signature")
+	}
 
 	if err := t.verifySigningTime(p7); err != nil {
 		return errors.Wrap(
@@ -118,31 +118,9 @@ func verifyCertificates(root, inter, leaf *x509.Certificate) error {
 	return nil
 }
 
-func (t PKPaymentToken) verifyPKCS7Signature(leaf *x509.Certificate, p7 *pkcs7.PKCS7) error {
-	verify := ecdsa.VerifyASN1(leaf.PublicKey.(*ecdsa.PublicKey), t.signedData(), leaf.Signature)
-	if !verify {
-		return errors.New("not valid signature")
-	}
-	// TODO: use the Go x509 API instead of OpenSSL
-	// This code does not work for some reason:
-	//if err := leaf.CheckSignature(leaf.SignatureAlgorithm, t.signedData(), p7.Content); err != nil {
-	//
-	//	return errors.Wrap(err, "invalid signature")
-	//}
-	//return nil
-
-	//C.OpenSSL_add_all_algorithms_func()
-	////defer C.EVP_cleanup()
-	//signedDataBio := newBIOBytes(t.signedData())
-	//defer signedDataBio.Free()
-	//// The PKCS7_NOVERIFY flag corresponds to verifying the chain of trust of
-	//// the certificates, which should have been done before
-	//r := C.PKCS7_verify(p7, nil, nil, signedDataBio.C(), nil, C.PKCS7_NOVERIFY)
-	//if r != 1 {
-	//	return errors.Wrap(opensslErr(), "signature validation error")
-	//}
-	//return nil
-	return nil
+func (t PKPaymentToken) verifyPKCS7Signature(p7 *pkcs7.PKCS7) error {
+	p7.Content = t.signedData()
+	return p7.Verify()
 }
 
 // signedData returns the data signed by the client's Secure Element as defined
