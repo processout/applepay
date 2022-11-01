@@ -31,7 +31,7 @@ func (t *PKPaymentToken) verifySignature() error {
 	// parse p7
 	p7, err := pkcs7.Parse(t.PaymentData.Signature)
 	if err != nil {
-		return fmt.Errorf("cannot parse our signed data: %s", err.Error())
+		return fmt.Errorf("cannot parse the signature: %s", err.Error())
 	}
 
 	// load Apple Root CA - G3 root certificate
@@ -118,6 +118,7 @@ func verifyCertificates(root, inter, leaf *x509.Certificate) error {
 }
 
 func (t PKPaymentToken) verifyPKCS7Signature(p7 *pkcs7.PKCS7) error {
+	// we assigned the signed data to the p7 content because it could be detached in the previous steps
 	p7.Content = t.signedData()
 	return p7.Verify()
 }
