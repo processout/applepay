@@ -1,6 +1,5 @@
 package applepay
 
-import "C"
 import (
 	"bytes"
 	"crypto/x509"
