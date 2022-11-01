@@ -3,6 +3,7 @@ package applepay
 import "C"
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
@@ -56,9 +57,9 @@ func (t *PKPaymentToken) verifySignature() error {
 		return errors.Wrap(err, "error when verifying the certificates")
 	}
 
-	if err := t.verifyPKCS7Signature(leaf, p7); err != nil {
-		return errors.Wrap(err, "error when verifying the pkcs7 signature")
-	}
+	//if err := t.verifyPKCS7Signature(leaf, p7); err != nil {
+	//	return errors.Wrap(err, "error when verifying the pkcs7 signature")
+	//}
 
 	if err := t.verifySigningTime(p7); err != nil {
 		return errors.Wrap(
@@ -118,13 +119,17 @@ func verifyCertificates(root, inter, leaf *x509.Certificate) error {
 }
 
 func (t PKPaymentToken) verifyPKCS7Signature(leaf *x509.Certificate, p7 *pkcs7.PKCS7) error {
+	verify := ecdsa.VerifyASN1(leaf.PublicKey.(*ecdsa.PublicKey), t.signedData(), leaf.Signature)
+	if !verify {
+		return errors.New("not valid signature")
+	}
 	// TODO: use the Go x509 API instead of OpenSSL
 	// This code does not work for some reason:
-	if err := leaf.CheckSignature(leaf.SignatureAlgorithm, t.signedData(), p7.Content); err != nil {
-
-		return errors.Wrap(err, "invalid signature")
-	}
-	return nil
+	//if err := leaf.CheckSignature(leaf.SignatureAlgorithm, t.signedData(), p7.Content); err != nil {
+	//
+	//	return errors.Wrap(err, "invalid signature")
+	//}
+	//return nil
 
 	//C.OpenSSL_add_all_algorithms_func()
 	////defer C.EVP_cleanup()
@@ -137,6 +142,7 @@ func (t PKPaymentToken) verifyPKCS7Signature(leaf *x509.Certificate, p7 *pkcs7.P
 	//	return errors.Wrap(opensslErr(), "signature validation error")
 	//}
 	//return nil
+	return nil
 }
 
 // signedData returns the data signed by the client's Secure Element as defined
