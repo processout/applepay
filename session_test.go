@@ -105,6 +105,15 @@ func TestCheckSessionURL(t *testing.T) {
 		Convey("apple.com does not work", func() {
 			So(checkSessionURL("https://apple.com"), ShouldNotBeNil)
 		})
+
+		Convey("attacking attempt should not work", func() {
+			So(checkSessionURL("https://attacker.com/cn-apple-pay-gateway.apple.com"), ShouldNotBeNil)
+		})
+
+		Convey("attacking attempt 2 should not work", func() {
+			So(checkSessionURL("https://attacker.com?cn-apple-pay-gateway.apple.com"), ShouldNotBeNil)
+		})
+
 	})
 
 	Convey("Wrong scheme", t, func() {
@@ -116,6 +125,10 @@ func TestCheckSessionURL(t *testing.T) {
 	Convey("Valid cases", t, func() {
 		Convey("Right domain with right scheme works", func() {
 			So(checkSessionURL("https://apple-pay-gateway.apple.com"), ShouldBeNil)
+		})
+
+		Convey("China specific domain works", func() {
+			So(checkSessionURL("https://cn-apple-pay-gateway.apple.com"), ShouldBeNil)
 		})
 
 		Convey("Alternative gateway URLs work", func() {
