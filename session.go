@@ -59,7 +59,7 @@ func checkSessionURL(location string) error {
 	if err != nil {
 		return errors.Wrap(err, "error parsing the URL")
 	}
-	hostReg := regexp.MustCompile("^apple-pay-gateway(-.+)?.apple.com$")
+	hostReg := regexp.MustCompile("^(cn-)?apple-pay-gateway(-.+)?.apple.com$")
 	if !hostReg.MatchString(u.Host) {
 		return errors.New("invalid host")
 	}
