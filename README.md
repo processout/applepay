@@ -1,5 +1,7 @@
 # applepay
 
+**Update, November 2023**: _This repo is no longer maintained._
+
 [![GoDoc](https://godoc.org/github.com/processout/applepay?status.svg)](https://godoc.org/github.com/processout/applepay)
 
 applepay is a Go package for processing Apple Pay transactions easily. It is aimed at merchants or PSPs that are looking to manage their own Apple Pay flow, as opposed to letting a third-party (such as Stripe) do it end-to-end. You will need a paid Apple Developer account to use this.
